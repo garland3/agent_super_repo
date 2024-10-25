@@ -1,0 +1,23 @@
+default:
+  urls:
+    - https://www.youtube.com/
+    - https://arstechnica.com/
+  output_dir: website_archives
+  delay_between_pages: 5
+  use_existing_chrome: false  # Set to false to start a new Chrome instance
+
+development:
+  urls:
+    - https://example1.com
+    - https://example2.com
+  output_dir: website_archives_dev
+  delay_between_pages: 2
+  use_existing_chrome: false
+
+production:
+  urls:
+    - https://example1.com
+    - https://example2.com
+  output_dir: website_archives_prod
+  delay_between_pages: 5
+  use_existing_chrome: false
