@@ -43,11 +43,24 @@
             justify-content: center;
         }
 
+        .video-container {
+            position: relative;
+            width: 640px;
+            height: 480px;
+        }
+
         #video {
+            position: absolute;
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             background-color: #000;
             flex-shrink: 0;
+        }
+
+        #drawCanvas {
+            position: absolute;
+            border-radius: 10px;
+            cursor: crosshair;
         }
 
         #llmResponse {
@@ -65,9 +78,34 @@
         }
 
         #llmResponse:empty::before {
-            content: "AI response will appear here...";
+            content: "Draw a box on the video and click Process to get AI response...";
             color: #999;
             font-style: italic;
+        }
+
+        .button-container {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        #processButton {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #processButton:hover {
+            background-color: #0056b3;
+        }
+
+        #processButton:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
         }
 
         @media (max-width: 1200px) {
@@ -82,7 +120,12 @@
                 padding: 1rem;
             }
 
-            #video {
+            .video-container {
+                width: 100%;
+                height: auto;
+            }
+
+            #video, #drawCanvas {
                 width: 100%;
                 height: auto;
             }
@@ -92,11 +135,17 @@
 <body>
     <header>
         <h1>AI Vision Assistant</h1>
-        <p class="subtitle">Real-time visual analysis powered by AI</p>
+        <p class="subtitle">Draw a box to analyze a specific region</p>
     </header>
 
     <div class="container">
-        <video id="video" width="640" height="480" autoplay></video>
+        <div class="video-container">
+            <video id="video" width="640" height="480" autoplay></video>
+            <canvas id="drawCanvas" width="640" height="480"></canvas>
+            <div class="button-container">
+                <button id="processButton" disabled>Process Selected Region</button>
+            </div>
+        </div>
         <div id="llmResponse"></div>
     </div>
 

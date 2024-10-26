@@ -9,13 +9,19 @@ import cv2
 import numpy as np
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage
+from dynaconf import Dynaconf
 
-# Configure logging
+# Initialize settings
+settings = Dynaconf(
+    settings_files=['settings.yaml'],
+)
+
+# Configure basic logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('app.log'),
+        logging.FileHandler("app.log"),
         logging.StreamHandler()
     ]
 )
@@ -31,7 +37,10 @@ class LLMProcessingError(Exception):
     pass
 
 # Initialize LLM
-llm = ChatOllama(model="llava", temperature=0)
+llm = ChatOllama(
+    model=settings.llm.model,
+    temperature=settings.llm.temperature
+)
 
 def convert_to_base64(pil_image):
     """
@@ -127,7 +136,7 @@ def summarize_image(encoded_image):
             encoded_image = encoded_image.split(';base64,')[1]
 
         # Create prompt message
-        prompt = "Please describe the contents of this image in English, providing a detailed description of what you see."
+        prompt = settings.llm.prompt
         message = create_prompt_message(encoded_image, prompt)
         
         logger.debug("Sending request to LLM")
