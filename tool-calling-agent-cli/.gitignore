@@ -1,0 +1,9 @@
+# Secrets and local settings
+.secrets.*
+secrets*
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class

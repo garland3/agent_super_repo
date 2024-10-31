@@ -1,0 +1,2 @@
+anthropic>=0.18.1
+dynaconf>=3.2.4
