@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Claude Tool Interface</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+    <style>
+        .log-entry {
+            font-family: monospace;
+            padding: 4px 8px;
+            margin: 2px 0;
+            border-radius: 4px;
+            background-color: #f5f5f5;
+        }
+        .log-timestamp {
+            color: #666;
+            margin-right: 8px;
+        }
+        .log-content {
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Claude Tool Interface</h1>
+        
+        <div class="tools-section">
+            <h2>Available Tools:</h2>
+            <ul>
+                {% for tool in tools %}
+                <li><strong>{{ tool.name }}</strong>: {{ tool.description }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="chat-container">
+            <div class="messages" id="messages">
+                {% if logs %}
+                    {% for log in logs %}
+                        <div class="log-entry">
+                            {% if '[' in log and ']' in log %}
+                                <span class="log-timestamp">{{ log.split(']')[0] + ']' }}</span>
+                                <span class="log-content">{{ log.split(']')[1] }}</span>
+                            {% else %}
+                                <span class="log-content">{{ log }}</span>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="input-section">
+                <form action="/process" method="post" id="chat-form">
+                    <div class="input-wrapper">
+                        <textarea name="user_input" rows="2" cols="50" placeholder="What would you like to do?">{{ previous_input }}</textarea>
+                        <button type="submit" id="submit-btn">Send</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="loading-indicator" class="loading-indicator hidden">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Processing your request...</div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('chat-form').addEventListener('submit', function(e) {
+            document.getElementById('loading-indicator').classList.remove('hidden');
+            document.getElementById('submit-btn').disabled = true;
+        });
+
+        // Scroll to bottom of messages on load
+        function scrollToBottom() {
+            const messages = document.getElementById('messages');
+            messages.scrollTop = messages.scrollHeight;
+        }
+        
+        window.onload = scrollToBottom;
+    </script>
+</body>
+</html>

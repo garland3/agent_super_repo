@@ -1,4 +1,14 @@
 from typing import Dict
+import requests
+import yaml
+import os
+
+# Load API key from secrets.yaml
+def load_api_key():
+    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config', 'secrets.yaml')
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    return config['default']['weatherapi_key']
 
 # Tool specification
 TOOL_SPEC = {
@@ -23,7 +33,7 @@ TOOL_SPEC = {
 
 def get_weather(location: str, unit: str = "fahrenheit") -> Dict:
     """
-    Get weather information for a location
+    Get weather information for a location using WeatherAPI.com
     
     Args:
         location (str): City and state (e.g., "San Francisco, CA")
@@ -33,16 +43,57 @@ def get_weather(location: str, unit: str = "fahrenheit") -> Dict:
         Dict: Weather information or error message
     """
     try:
-        # This is a mock implementation
-        # In production, you would integrate with a real weather API
-        temp = 72 if unit == "fahrenheit" else 22
-        return {
-            "temperature": temp,
+        api_key = load_api_key()
+        base_url = "https://api.weatherapi.com/v1/current.json"
+        
+        # Make API request
+        params = {
+            'key': api_key,
+            'q': location,
+            'aqi': 'yes'  # Include air quality data
+        }
+        
+        response = requests.get(base_url, params=params)
+        response.raise_for_status()  # Raise exception for bad status codes
+        
+        data = response.json()
+        
+        # Extract relevant weather information
+        weather_info = {
+            "location": f"{data['location']['name']}, {data['location']['region']}",
+            "temperature": data['current']['temp_f'] if unit == "fahrenheit" else data['current']['temp_c'],
             "unit": unit,
-            "condition": "sunny",
-            "humidity": 45,
-            "location": location,
-            "note": "This is mock data for demonstration"
+            "condition": data['current']['condition']['text'],
+            "humidity": data['current']['humidity'],
+            "wind_speed": data['current']['wind_mph'] if unit == "fahrenheit" else data['current']['wind_kph'],
+            "wind_unit": "mph" if unit == "fahrenheit" else "kph",
+            "feels_like": data['current']['feelslike_f'] if unit == "fahrenheit" else data['current']['feelslike_c'],
+            "uv_index": data['current']['uv'],
+            "last_updated": data['current']['last_updated']
+        }
+        
+        # Add air quality data if available
+        if 'air_quality' in data['current']:
+            weather_info['air_quality'] = {
+                'us_epa_index': data['current']['air_quality']['us-epa-index'],
+                'pm2_5': data['current']['air_quality']['pm2_5'],
+                'pm10': data['current']['air_quality']['pm10']
+            }
+        
+        return weather_info
+        
+    except requests.exceptions.RequestException as e:
+        return {
+            "error": f"API request failed: {str(e)}",
+            "status": "error"
+        }
+    except KeyError as e:
+        return {
+            "error": f"Failed to parse weather data: {str(e)}",
+            "status": "error"
         }
     except Exception as e:
-        return {"error": str(e)}
+        return {
+            "error": f"An unexpected error occurred: {str(e)}",
+            "status": "error"
+        }

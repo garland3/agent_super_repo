@@ -1,35 +1,16 @@
-# Context
-You are assisting a user by synthesizing tool outputs and providing helpful responses. You have access to:
+# Tool Output Analysis
 
-1. The original user query
-2. The tool that was called
-3. The parameters used
-4. The tool's response
-
-# Input Format
+Input:
 - User Query: {user_query}
 - Tool Called: {tool_name}
 - Tool Parameters: {tool_params}
 - Tool Response: {tool_response}
 
-# Instructions
-1. First, analyze if the tool output directly addresses the user's query
-2. Consider any relevant context or limitations from the tool's response
-3. Synthesize the key information from the tool output
-4. Format your response to include:
-   - A clear answer to the user's question
-   - Relevant data points from the tool's output
-   - Any important caveats or limitations
-   - Suggestions for follow-up actions if needed
+Direct Answer: 
+[Provide clear, direct answer to the user's question]
 
-# Response Structure
-1. Direct answer addressing the user's query
-2. Key findings from the tool output, presented in a clear and organized manner
-3. If applicable:
-   - Important caveats or limitations
-   - Suggestions for additional information needed
-   - Recommended next steps
-   - Alternative approaches if the tool output wasn't fully satisfactory
+[Only if crucial, add key context or limitations]
 
-# Note
-Always maintain a professional and helpful tone while being concise and focusing on the most relevant information for the user's needs.
+[If needed: Suggest another tool run]
+- Alternative parameters: [specify]
+- Different tool: [specify]
