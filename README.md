@@ -29,6 +29,17 @@ See `requirements.txt` for all dependencies.
 
 Each subfolder contains its own README with specific setup instructions for that component.
 
+I have a conda env named 'agents'
+
+```bash
+conda create -n agents python=3.12
+conda activate agents
+pip install -r requirements.txt
+```
+
 ## Note
 
 Some components may have specific environment requirements. Please refer to individual folder READMEs for detailed setup instructions.
+
+
+
