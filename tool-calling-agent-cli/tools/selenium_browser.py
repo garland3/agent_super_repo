@@ -18,11 +18,11 @@ TOOL_SPEC = {
             "action": {
                 "type": "string",
                 "description": "The automation action to perform",
-                "enum": ["navigate", "screenshot", "save_html"]
+                "enum": ["navigate", "screenshot", "save_html", "open"]
             },
             "url": {
                 "type": "string",
-                "description": "URL to perform the action on"
+                "description": "URL or local file path to perform the action on"
             },
             "output_dir": {
                 "type": "string",
@@ -68,12 +68,32 @@ class SeleniumBrowserTool:
         """Convert URL to a safe filename"""
         return url.replace("://", "_").replace("/", "_").replace(".", "_")[:100]
 
+    def _convert_to_url(self, path_or_url: str) -> str:
+        """Convert a file path to a file:// URL if needed"""
+        if path_or_url.startswith(('http://', 'https://', 'file://')):
+            return path_or_url
+        
+        # Convert local file path to absolute path and then to URL
+        abs_path = os.path.abspath(path_or_url)
+        return f"file:///{abs_path.replace(os.sep, '/')}"
+
+    def open(self, path_or_url: str) -> Dict:
+        """Open a URL or local file in the browser and keep it open"""
+        try:
+            self._initialize_driver()
+            url = self._convert_to_url(path_or_url)
+            self.driver.get(url)
+            time.sleep(5)  # Wait for page load
+            return {"success": True, "message": f"Successfully opened {path_or_url} in browser"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     def navigate(self, url: str) -> Dict:
         """Navigate to a URL"""
         try:
             self._initialize_driver()
             self.driver.get(url)
-            time.sleep(2)  # Wait for page load
+            time.sleep(5)  # Wait for page load
             return {"success": True, "message": f"Successfully navigated to {url}"}
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -141,8 +161,8 @@ def selenium_browser_action(action: str, url: str, output_dir: str = "selenium_o
     Perform Selenium web automation actions
     
     Args:
-        action (str): Action to perform (navigate, screenshot, save_html)
-        url (str): URL to perform the action on
+        action (str): Action to perform (navigate, screenshot, save_html, open)
+        url (str): URL or local file path to perform the action on
         output_dir (str): Directory to save outputs (optional)
         
     Returns:
@@ -157,6 +177,8 @@ def selenium_browser_action(action: str, url: str, output_dir: str = "selenium_o
             return tool.take_screenshot(url)
         elif action == "save_html":
             return tool.save_html(url)
+        elif action == "open":
+            return tool.open(url)
         else:
             return {"success": False, "error": f"Unknown action: {action}"}
             
