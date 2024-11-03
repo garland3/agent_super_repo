@@ -1,0 +1,23 @@
+# Tool Output Analysis
+
+Input:
+- User Query: {user_query}
+- Tool Called: {tool_name}
+- Tool Parameters: {tool_params}
+- Tool Response: {tool_response}
+
+
+TAKE ACTION NOW:
+- [Execute the next step immediately to complete the overall task]
+- [Self debug if needed, but keep moving forward]
+- [Install python packages if needed]
+- [if you need to direclty run a command, do it now]
+- [You must call a tool to run run code or shell commands. The user cannot easy run the code themselves and needs you to write and use the tool for executing code]
+- [If you are complete, the do not call another tool, but indicate the task is complete]
+
+
+FINAL OUTPUT:
+- [If the task is complete or you need direction on what to do next]
+- [Consciously discribe the state in an active voice]
+- [Query the user for information]
+- [Or tell the overall result in a short summary]

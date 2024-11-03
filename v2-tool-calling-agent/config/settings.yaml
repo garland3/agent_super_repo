@@ -1,0 +1,6 @@
+default:
+  model: "claude-3-sonnet-20240229"
+  max_tokens: 4000
+  system_prompt_path: "prompts/system_prompt.txt"
+python_execution:
+  conda_env: "agentsandbox"
