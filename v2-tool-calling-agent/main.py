@@ -54,11 +54,15 @@ def sanitize_input(user_input: str) -> str:
     sanitized = re.sub(r'[^\x20-\x7E]', '', user_input)
     return sanitized.strip()
 
-def cli_input() -> str:
-    user_input = input(f"\n{Fore.YELLOW}What would you like to do? (or 'exit' to quit): {Style.RESET_ALL}")
-    sanitized_input = sanitize_input(user_input)
-    logging.info(f"User Input: {sanitized_input}")
-    return sanitized_input
+def cli_input(message = None) -> str:
+    if message:
+        print(f"{Fore.YELLOW}{message}{Style.RESET_ALL}")
+    else:
+        user_input = input(f"\n{Fore.YELLOW}What would you like to do? (or 'exit' to quit): {Style.RESET_ALL}")
+        sanitized_input = sanitize_input(user_input)
+        logging.info(f"User Input: {message}")
+        return sanitized_input
+    return message
 
 def cli_log(message: str):
     safe_message = sanitize_log_message(message)

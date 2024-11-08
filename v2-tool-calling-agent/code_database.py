@@ -7,7 +7,7 @@ from pathlib import Path
 # Tool Specification
 TOOL_SPEC = {
     "name": "code_database",
-    "description": "Manages a SQLite database of code snippets with summaries and timestamps",
+    "description": "Manages a SQLite database of code snippets with function signatures and descriptions",
     "input_schema": {
         "type": "object",
         "properties": {
@@ -16,13 +16,13 @@ TOOL_SPEC = {
                 "description": "The action to perform on the database",
                 "enum": ["add", "get", "search"]
             },
-            "short_summary": {
+            "function_signature": {
                 "type": "string",
-                "description": "One sentence description of the code"
+                "description": "The function signature or method declaration"
             },
-            "long_summary": {
+            "short_description": {
                 "type": "string",
-                "description": "Paragraph-length description of the code"
+                "description": "Brief description of what the code does"
             },
             "code": {
                 "type": "string",
@@ -34,7 +34,7 @@ TOOL_SPEC = {
             },
             "query": {
                 "type": "string",
-                "description": "Search term to find in summaries or code"
+                "description": "Search term to find in descriptions or code"
             },
             "rating_0_to_5": {
                 "type": "integer",
@@ -57,39 +57,31 @@ class CodeDatabase:
 
     def create_table(self):
         cursor = self.conn.cursor()
-        # Create the table if it doesn't exist
+        # Drop the old table to recreate with new schema
+        cursor.execute('DROP TABLE IF EXISTS code_snippets')
+        
+        # Create the table with new schema
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS code_snippets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                short_summary TEXT NOT NULL,
-                long_summary TEXT NOT NULL,
+                function_signature TEXT NOT NULL,
+                short_description TEXT NOT NULL,
                 code TEXT NOT NULL,
                 timestamp DATETIME NOT NULL,
                 rating_0_to_5 INTEGER DEFAULT NULL,
                 reason_for_rating TEXT DEFAULT NULL
             )
         ''')
-        
-        # Check if the new columns exist, if not add them
-        cursor.execute("PRAGMA table_info(code_snippets)")
-        columns = [column[1] for column in cursor.fetchall()]
-        
-        if 'rating_0_to_5' not in columns:
-            cursor.execute('ALTER TABLE code_snippets ADD COLUMN rating_0_to_5 INTEGER DEFAULT NULL')
-        
-        if 'reason_for_rating' not in columns:
-            cursor.execute('ALTER TABLE code_snippets ADD COLUMN reason_for_rating TEXT DEFAULT NULL')
-            
         self.conn.commit()
 
-    def add_code(self, short_summary: str, long_summary: str, code: str, rating_0_to_5: int = None, reason_for_rating: str = None) -> int:
+    def add_code(self, function_signature: str, short_description: str, code: str, rating_0_to_5: int = None, reason_for_rating: str = None) -> int:
         cursor = self.conn.cursor()
         timestamp = datetime.now().isoformat()
         cursor.execute(
             '''INSERT INTO code_snippets 
-               (short_summary, long_summary, code, timestamp, rating_0_to_5, reason_for_rating) 
+               (function_signature, short_description, code, timestamp, rating_0_to_5, reason_for_rating) 
                VALUES (?, ?, ?, ?, ?, ?)''',
-            (short_summary, long_summary, code, timestamp, rating_0_to_5, reason_for_rating)
+            (function_signature, short_description, code, timestamp, rating_0_to_5, reason_for_rating)
         )
         self.conn.commit()
         return cursor.lastrowid
@@ -101,8 +93,8 @@ class CodeDatabase:
         if result:
             return {
                 'id': result[0],
-                'short_summary': result[1],
-                'long_summary': result[2],
+                'function_signature': result[1],
+                'short_description': result[2],
                 'code': result[3],
                 'timestamp': result[4],
                 'rating_0_to_5': result[5],
@@ -115,16 +107,16 @@ class CodeDatabase:
         search_pattern = f'%{query}%'
         cursor.execute('''
             SELECT * FROM code_snippets 
-            WHERE short_summary LIKE ? 
-            OR long_summary LIKE ? 
+            WHERE function_signature LIKE ? 
+            OR short_description LIKE ? 
             OR code LIKE ?
         ''', (search_pattern, search_pattern, search_pattern))
         results = cursor.fetchall()
         return [
             {
                 'id': r[0],
-                'short_summary': r[1],
-                'long_summary': r[2],
+                'function_signature': r[1],
+                'short_description': r[2],
                 'code': r[3],
                 'timestamp': r[4],
                 'rating_0_to_5': r[5],
@@ -147,8 +139,8 @@ def code_database(action: str, **kwargs) -> Dict[str, Any]:
         action (str): The action to perform - 'add', 'get', or 'search'
         **kwargs: Additional arguments based on the action:
             For 'add':
-                short_summary (str): One sentence description
-                long_summary (str): Detailed paragraph description
+                function_signature (str): The function signature
+                short_description (str): Brief description
                 code (str): The code snippet
                 rating_0_to_5 (int, optional): Rating from 0 to 5
                 reason_for_rating (str, optional): Explanation for rating
@@ -164,7 +156,7 @@ def code_database(action: str, **kwargs) -> Dict[str, Any]:
     """
     try:
         if action == "add":
-            required = ["short_summary", "long_summary", "code"]
+            required = ["function_signature", "short_description", "code"]
             if not all(k in kwargs for k in required):
                 return {"error": "Missing required parameters for add action"}
             
@@ -175,8 +167,8 @@ def code_database(action: str, **kwargs) -> Dict[str, Any]:
                     return {"error": "rating_0_to_5 must be an integer between 0 and 5"}
             
             snippet_id = db.add_code(
-                kwargs["short_summary"],
-                kwargs["long_summary"],
+                kwargs["function_signature"],
+                kwargs["short_description"],
                 kwargs["code"],
                 kwargs.get("rating_0_to_5"),
                 kwargs.get("reason_for_rating")

@@ -34,6 +34,8 @@ class ClaudeProcessor:
         self.io_handler.log("Generating response from Claude...")
         start_time = time.time()
         
+        logging.info(f"Message history for this iteration: {json.dumps(self.message_history, indent=2)}")
+        
         response = self.client.messages.create(
             model=settings.model,
             max_tokens=settings.max_tokens,
@@ -44,6 +46,10 @@ class ClaudeProcessor:
         elapsed_time = time.time() - start_time
         self.io_handler.log(f"Response generated in {elapsed_time:.2f} seconds")
         logging.info(f"Claude response generated in {elapsed_time:.2f} seconds")
+        
+        # Log the text content instead of trying to JSON serialize the entire response
+        content_texts = [block.text if hasattr(block, 'text') else str(block) for block in response.content]
+        logging.info(f"Response content texts: {json.dumps(content_texts, indent=2)}")
         
         tool_use_blocks = [block for block in response.content if block.type == 'tool_use']
         
