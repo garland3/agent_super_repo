@@ -1,3 +1,16 @@
 default:
+  # Model configuration
   model: "claude-3-sonnet-20240229"
   max_tokens: 4000
+  max_iterations: 50
+ 
+  
+  # Tool use configuration
+  tool_choice:
+    type: "auto"  # Can be "auto", "any", or "tool"
+    disable_parallel_tool_use: false  # Whether to disable parallel tool execution
+  
+  # System prompt token counts for tool use (as per docs)
+  tool_use_tokens:
+    auto: 159  # Token count when tool_choice is "auto"
+    forced: 235  # Token count when tool_choice is "any" or specific "tool"
