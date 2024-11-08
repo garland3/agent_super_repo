@@ -8,6 +8,7 @@ import anthropic
 import json
 import logging
 import time
+import datetime
 from typing import Dict, List, Tuple, Callable, Any, Optional
 from dynaconf import Dynaconf
 
@@ -79,12 +80,17 @@ class ClaudeProcessor:
         self.io_handler.log("🤖 Generating response from Claude...")
         start_time = time.time()
         
+        # Add current date/time to system prompt
+        current_datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        system_prompt = f"Current date and time: {current_datetime}\n\nYou are Cline, a highly skilled software engineer with extensive knowledge in many programming languages, frameworks, design patterns, and best practices."
+        
         # Prepare API request parameters
         api_params = {
             "model": settings.model,
             "max_tokens": settings.max_tokens,
             "tools": tools,
-            "messages": self.message_history
+            "messages": self.message_history,
+            "system": system_prompt
         }
         
         # Add tool choice configuration if specified

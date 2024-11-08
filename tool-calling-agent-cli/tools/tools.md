@@ -89,6 +89,7 @@ See existing tools for reference implementations:
 - calculator.py: Example of numerical operations with multiple parameters
 - weather.py: Example of optional parameters and mock API implementation
 - stl_viewer.py: Example of file handling and browser integration for viewing 3D models
+- browser_automation.py: Example of browser control with mouse movements, keyboard input, and screenshots
 
 ## Testing
 

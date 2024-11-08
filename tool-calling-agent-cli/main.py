@@ -6,7 +6,7 @@ The application handles tool execution, input/output formatting, and message his
 from colorama import init, Fore, Style
 import logging
 from claude_processor import ClaudeProcessor, IOHandler
-from utils import load_prompt_template, load_tool_specs
+from utils import load_prompt_template, load_tool_specs, format_prompt_template
 
 # Initialize colorama for cross-platform colored terminal output
 init()
@@ -72,7 +72,8 @@ def main():
     
     # Load available tools and prompt template from configuration
     tools = load_tool_specs()
-    prompt_template = load_prompt_template()
+    template = load_prompt_template()
+    prompt_template = format_prompt_template(template)
     
     # Display available tools to user at startup
     print(f"{Fore.WHITE}Available tools:{Style.RESET_ALL}")

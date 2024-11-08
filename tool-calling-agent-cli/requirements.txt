@@ -1,2 +1,4 @@
 anthropic>=0.18.1
 dynaconf>=3.2.4
+pyautogui>=0.9.54
+pyscreenshot>=0.1.8

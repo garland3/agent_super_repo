@@ -1,11 +1,29 @@
 import os
 import importlib
 from typing import Dict, List
+from datetime import datetime
 
 def load_prompt_template() -> str:
     """Load the prompt template from file"""
     with open('prompt_template.txt', 'r') as f:
         return f.read()
+
+def format_prompt_template(template: str, **kwargs) -> str:
+    """Format the prompt template with the provided parameters"""
+    # Default values for all possible template parameters
+    defaults = {
+        'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'user_query': '[No query]',
+        'tool_name': '[No tool]',
+        'tool_params': '[No parameters]',
+        'tool_response': '[No response]'
+    }
+    
+    # Update defaults with any provided values
+    defaults.update(kwargs)
+    
+    # Format the template with all parameters
+    return template.format(**defaults)
 
 def load_tool_specs() -> List[Dict]:
     """Load tool specifications from all tool modules"""

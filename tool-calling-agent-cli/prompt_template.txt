@@ -1,3 +1,6 @@
+# System Information
+Current Date and Time: {datetime}
+
 # Tool Output Analysis
 
 Input:
