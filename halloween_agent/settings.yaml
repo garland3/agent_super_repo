@@ -1,0 +1,21 @@
+llm:
+  provider: "ollama"
+  provider_old: "together"
+  model_old: "x/llama3.2-vision:latest"
+  model: "llava:latest"
+  temperature: 0
+  timeout_seconds: 30
+  prompt: "Are people in this image? They might be small. This is the view of the front door area. respond in json. {  'found_people': true,  'description_of_people': List [str]    }  "
+  prompt_old: "This is form a security camera view. The door might be hard to see, but is on the left side of the image. There is a wood pillar and halloween decorations. A previous description of this scene said, 'The image depicts a white car parked in a driveway, with a house and a tree visible in the background. The car is positioned on the left side of the image, facing towards the left. It has a black grill and a black bumper, and appears to be a sedan or hatchback. The house, located to the right of the car, has a light-colored exterior with a darker roof. A porch is visible in front of the house, with a railing and a few steps leading up to it. Trees and bushes surround the house, providing shade for the driveway and the house. In the background, a road is visible, with a fence running along the side of the road. The overall atmosphere of the image is one of quietness and stillness, with no people or animals visible.' ---- Given that information. Please tell if anything has changed. ONLY REPORT CHANGES. In particular note people. If nothing has changed , then say. 'no change'."
+
+image:
+  max_size_mb: 10
+  max_width: 4096
+  max_height: 4096
+  supported_formats:
+    - jpeg
+    - jpg
+    - png
+  storage:
+    dir: "processed_images"
+    max_images: 30

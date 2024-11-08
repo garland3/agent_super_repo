@@ -7,10 +7,21 @@ import asyncio
 import base64
 from PIL import Image
 import io
+import json
 from core import summarize_image, ImageProcessingError, LLMProcessingError
+from dynaconf import Dynaconf
+from database import init_db, save_json_response
+
+# Initialize settings
+settings = Dynaconf(
+    settings_files=['settings.yaml'],
+)
 
 # Get logger
 logger = logging.getLogger(__name__)
+
+# Initialize database on startup
+init_db()
 
 app = FastAPI()
 # Change the static files mount point to /static instead of root
@@ -35,19 +46,20 @@ def validate_base64_image(base64_str: str) -> bool:
         # Try to open as image
         img = Image.open(io.BytesIO(image_data))
         
-        # Check if image is too large (e.g., > 10MB)
-        if len(image_data) > 10 * 1024 * 1024:  # 10MB limit
+        # Check if image is too large
+        max_size = settings.image.max_size_mb * 1024 * 1024  # Convert MB to bytes
+        if len(image_data) > max_size:
             logger.error("Image size too large")
             return False
             
         # Validate image dimensions
         width, height = img.size
-        if width > 4096 or height > 4096:  # Arbitrary max dimensions
+        if width > settings.image.max_width or height > settings.image.max_height:
             logger.error(f"Image dimensions too large: {width}x{height}")
             return False
             
         # Check if image format is supported
-        if img.format.lower() not in ['jpeg', 'jpg', 'png']:
+        if img.format.lower() not in settings.image.supported_formats:
             logger.error(f"Unsupported image format: {img.format}")
             return False
             
@@ -86,14 +98,32 @@ async def process_image(request: Request):
         logger.info("Getting LLM analysis")
         loop = asyncio.get_event_loop()
         try:
-            # Set a timeout of 30 seconds for the LLM processing
             llm_response = await asyncio.wait_for(
                 loop.run_in_executor(None, summarize_image, encoded_image),
-                timeout=30.0
+                timeout=settings.llm.timeout_seconds
             )
         except asyncio.TimeoutError:
             logger.error("LLM processing timeout")
             raise HTTPException(status_code=504, detail="Processing timeout")
+        
+        # Check if response contains JSON
+        if '```json' in llm_response:
+            try:
+                # Extract JSON content between ```json and ```
+                json_start = llm_response.find('```json') + 7
+                json_end = llm_response.find('```', json_start)
+                json_str = llm_response[json_start:json_end].strip()
+                
+                # Try to parse JSON
+                json_data = json.loads(json_str)
+                
+                # Save to database if parsing successful
+                save_json_response(json_data)
+                logger.info("Successfully parsed and saved JSON response")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse JSON from response: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error processing JSON response: {str(e)}")
         
         logger.info("Successfully processed image and generated response")
         return {"llm_response": llm_response}
