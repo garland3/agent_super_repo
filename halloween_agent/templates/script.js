@@ -3,46 +3,69 @@ const video = document.getElementById('video');
 const canvas = document.getElementById('drawCanvas');
 const ctx = canvas.getContext('2d');
 const llmResponse = document.getElementById('llmResponse');
+const saveButton = document.getElementById('saveButton');
 const processButton = document.getElementById('processButton');
-let isProcessing = false;
 
-// Drawing state
+let isProcessing = false;  // Flag to track if a request is in progress
 let isDrawing = false;
 let startX = 0;
 let startY = 0;
 let currentBox = null;
+let savedBox = null;
+let processingInterval = null;
 
 // Initialize webcam
 navigator.mediaDevices.getUserMedia({ video: true })
     .then(stream => {
         video.srcObject = stream;
+        // Set canvas size after video loads
+        video.onloadedmetadata = () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        };
     })
     .catch(error => {
         console.error('Error accessing webcam:', error);
     });
 
 // Drawing functions
-function drawBox(x, y, width, height) {
+function clearCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#00ff00';
-    ctx.lineWidth = 2;
+}
+
+function drawBox(x, y, width, height, color = '#00ff00') {
+    clearCanvas();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
     ctx.strokeRect(x, y, width, height);
+    
+    // Add semi-transparent fill
+    ctx.fillStyle = `${color}33`; // 20% opacity
+    ctx.fillRect(x, y, width, height);
 }
 
 canvas.addEventListener('mousedown', (e) => {
+    if (savedBox) return; // Prevent drawing if box is already saved
+    
     const rect = canvas.getBoundingClientRect();
-    startX = e.clientX - rect.left;
-    startY = e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    startX = (e.clientX - rect.left) * scaleX;
+    startY = (e.clientY - rect.top) * scaleY;
     isDrawing = true;
-    processButton.disabled = true;
+    saveButton.disabled = true;
 });
 
 canvas.addEventListener('mousemove', (e) => {
     if (!isDrawing) return;
 
     const rect = canvas.getBoundingClientRect();
-    const currentX = e.clientX - rect.left;
-    const currentY = e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const currentX = (e.clientX - rect.left) * scaleX;
+    const currentY = (e.clientY - rect.top) * scaleY;
     
     const width = currentX - startX;
     const height = currentY - startY;
@@ -54,8 +77,11 @@ canvas.addEventListener('mouseup', (e) => {
     if (!isDrawing) return;
     
     const rect = canvas.getBoundingClientRect();
-    const endX = e.clientX - rect.left;
-    const endY = e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const endX = (e.clientX - rect.left) * scaleX;
+    const endY = (e.clientY - rect.top) * scaleY;
     
     const width = endX - startX;
     const height = endY - startY;
@@ -68,36 +94,66 @@ canvas.addEventListener('mouseup', (e) => {
     };
     
     isDrawing = false;
-    processButton.disabled = false;
+    saveButton.disabled = false;
 });
 
 canvas.addEventListener('mouseleave', () => {
-    if (isDrawing) {
+    if (isDrawing && !savedBox) {
         isDrawing = false;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        clearCanvas();
         currentBox = null;
-        processButton.disabled = true;
+        saveButton.disabled = true;
+    }
+});
+
+saveButton.addEventListener('click', () => {
+    if (!currentBox) return;
+    
+    savedBox = {...currentBox};
+    drawBox(savedBox.x, savedBox.y, savedBox.width, savedBox.height, '#ff0000');
+    saveButton.disabled = true;
+    processButton.disabled = false;
+    
+    // Update instructions
+    const subtitle = document.querySelector('.subtitle');
+    subtitle.textContent = 'Click "Start Processing" to begin continuous analysis';
+});
+
+processButton.addEventListener('click', () => {
+    if (!savedBox) return;
+    
+    if (processingInterval) {
+        // Stop processing
+        clearInterval(processingInterval);
+        processingInterval = null;
+        processButton.textContent = 'Start Processing';
+        processButton.style.backgroundColor = '#007bff';
+    } else {
+        // Start processing
+        processingInterval = setInterval(processFrame, 5000);
+        processButton.textContent = 'Stop Processing';
+        processButton.style.backgroundColor = '#dc3545';
     }
 });
 
 async function processFrame() {
-    if (isProcessing || !currentBox) return;
+    if (isProcessing || !savedBox) {
+        console.log('Previous request still processing or no box saved, skipping...');
+        return;
+    }
 
     try {
         isProcessing = true;
-        processButton.disabled = true;
-
-        // Create a temporary canvas for the cropped region
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = currentBox.width;
-        tempCanvas.height = currentBox.height;
+        tempCanvas.width = savedBox.width;
+        tempCanvas.height = savedBox.height;
         const tempCtx = tempCanvas.getContext('2d');
 
         // Draw the cropped region from the video
         tempCtx.drawImage(
             video,
-            currentBox.x, currentBox.y, currentBox.width, currentBox.height,
-            0, 0, currentBox.width, currentBox.height
+            savedBox.x, savedBox.y, savedBox.width, savedBox.height,
+            0, 0, savedBox.width, savedBox.height
         );
 
         // Convert canvas to base64 string, removing the data:image/png;base64, prefix
@@ -132,9 +188,5 @@ async function processFrame() {
         console.error('Error processing image:', error);
     } finally {
         isProcessing = false;
-        processButton.disabled = false;
     }
 }
-
-// Add click handler for process button
-processButton.addEventListener('click', processFrame);

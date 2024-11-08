@@ -45,22 +45,33 @@
 
         .video-container {
             position: relative;
-            width: 640px;
+            width:640px;
             height: 480px;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         #video {
             position: absolute;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            background-color: #000;
-            flex-shrink: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
         }
 
         #drawCanvas {
             position: absolute;
-            border-radius: 10px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
             cursor: crosshair;
+            pointer-events: all;
+            background: transparent;
         }
 
         #llmResponse {
@@ -78,20 +89,24 @@
         }
 
         #llmResponse:empty::before {
-            content: "Draw a box on the video and click Process to get AI response...";
+            content: "Draw and save a box to start processing...";
             color: #999;
             font-style: italic;
         }
 
         .button-container {
+            position: relative;
+            z-index: 3;
             text-align: center;
             margin-top: 1rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
         }
 
-        #processButton {
+        button {
             padding: 0.5rem 1rem;
             font-size: 1rem;
-            background-color: #007bff;
             color: white;
             border: none;
             border-radius: 5px;
@@ -99,13 +114,25 @@
             transition: background-color 0.2s;
         }
 
-        #processButton:hover {
-            background-color: #0056b3;
+        button:disabled {
+            background-color: #ccc !important;
+            cursor: not-allowed;
         }
 
-        #processButton:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
+        #saveButton {
+            background-color: #28a745;
+        }
+
+        #saveButton:hover {
+            background-color: #218838;
+        }
+
+        #processButton {
+            background-color: #007bff;
+        }
+
+        #processButton:hover {
+            background-color: #0056b3;
         }
 
         @media (max-width: 1200px) {
@@ -123,11 +150,7 @@
             .video-container {
                 width: 100%;
                 height: auto;
-            }
-
-            #video, #drawCanvas {
-                width: 100%;
-                height: auto;
+                aspect-ratio: 4/3;
             }
         }
     </style>
@@ -135,15 +158,16 @@
 <body>
     <header>
         <h1>AI Vision Assistant</h1>
-        <p class="subtitle">Draw a box to analyze a specific region</p>
+        <p class="subtitle">Draw a box and save to start continuous analysis</p>
     </header>
 
     <div class="container">
         <div class="video-container">
-            <video id="video" width="640" height="480" autoplay></video>
-            <canvas id="drawCanvas" width="640" height="480"></canvas>
+            <video id="video" autoplay></video>
+            <canvas id="drawCanvas"></canvas>
             <div class="button-container">
-                <button id="processButton" disabled>Process Selected Region</button>
+                <button id="saveButton" disabled>Save Box</button>
+                <button id="processButton" disabled>Start Processing</button>
             </div>
         </div>
         <div id="llmResponse"></div>

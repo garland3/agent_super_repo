@@ -7,8 +7,10 @@ import asyncio
 import base64
 from PIL import Image
 import io
+import json
 from core import summarize_image, ImageProcessingError, LLMProcessingError
 from dynaconf import Dynaconf
+from database import init_db, save_json_response
 
 # Initialize settings
 settings = Dynaconf(
@@ -17,6 +19,9 @@ settings = Dynaconf(
 
 # Get logger
 logger = logging.getLogger(__name__)
+
+# Initialize database on startup
+init_db()
 
 app = FastAPI()
 # Change the static files mount point to /static instead of root
@@ -100,6 +105,25 @@ async def process_image(request: Request):
         except asyncio.TimeoutError:
             logger.error("LLM processing timeout")
             raise HTTPException(status_code=504, detail="Processing timeout")
+        
+        # Check if response contains JSON
+        if '```json' in llm_response:
+            try:
+                # Extract JSON content between ```json and ```
+                json_start = llm_response.find('```json') + 7
+                json_end = llm_response.find('```', json_start)
+                json_str = llm_response[json_start:json_end].strip()
+                
+                # Try to parse JSON
+                json_data = json.loads(json_str)
+                
+                # Save to database if parsing successful
+                save_json_response(json_data)
+                logger.info("Successfully parsed and saved JSON response")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse JSON from response: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error processing JSON response: {str(e)}")
         
         logger.info("Successfully processed image and generated response")
         return {"llm_response": llm_response}

@@ -8,7 +8,7 @@ from PIL import Image
 import cv2
 import numpy as np
 from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from dynaconf import Dynaconf
 
 # Initialize settings
@@ -36,11 +36,73 @@ class LLMProcessingError(Exception):
     """Custom exception for LLM processing errors"""
     pass
 
-# Initialize LLM
-llm = ChatOllama(
-    model=settings.llm.model,
-    temperature=settings.llm.temperature
-)
+if settings.llm.provider == "ollama":
+    # Initialize LLM
+    llm = ChatOllama(
+        model=settings.llm.model,
+        temperature=settings.llm.temperature
+    )
+elif settings.llm.provider == "together":
+    print("Using Together AI")
+    from langchain_together import ChatTogether
+    llm = ChatTogether(
+        model="meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo",
+        temperature=0,
+        max_tokens=None,
+        timeout=None,
+        max_retries=2,
+        # api_key="...",
+        # other params...
+    )
+    
+    
+
+def manage_image_storage(image_base64):
+    """
+    Save image to storage and maintain only the last N images
+    
+    Args:
+        image_base64: Base64 encoded image string
+    Returns:
+        str: Path to the saved image
+    """
+    try:
+        storage_dir = settings.image.storage.dir
+        max_images = settings.image.storage.max_images
+
+        # Create storage directory if it doesn't exist
+        os.makedirs(storage_dir, exist_ok=True)
+
+        # Generate timestamp-based filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"image_{timestamp}.jpg"
+        filepath = os.path.join(storage_dir, filename)
+
+        # Save the new image
+        if ';base64,' in image_base64:
+            image_base64 = image_base64.split(';base64,')[1]
+        image_data = base64.b64decode(image_base64)
+        with open(filepath, 'wb') as f:
+            f.write(image_data)
+
+        # Get list of existing images sorted by creation time
+        existing_images = sorted(
+            [os.path.join(storage_dir, f) for f in os.listdir(storage_dir) if f.endswith(('.jpg', '.jpeg', '.png'))],
+            key=os.path.getctime
+        )
+
+        # Remove oldest images if exceeding max_images
+        while len(existing_images) >= max_images:
+            oldest_image = existing_images.pop(0)
+            os.remove(oldest_image)
+            logger.info(f"Removed oldest image: {oldest_image}")
+
+        logger.info(f"Saved new image: {filepath}")
+        return filepath
+
+    except Exception as e:
+        logger.error(f"Error in manage_image_storage: {str(e)}\n{traceback.format_exc()}")
+        raise ImageProcessingError(f"Failed to manage image storage: {str(e)}")
 
 def convert_to_base64(pil_image):
     """
@@ -110,17 +172,54 @@ def decode_image(image_base64):
         logger.error(f"Error in decode_image: {str(e)}\n{traceback.format_exc()}")
         raise ImageProcessingError(f"Failed to decode image: {str(e)}")
 
-def create_prompt_message(image_base64, text):
+
+
+def create_prompt_message(image_base64, text, provider="ollama"):
     """
-    Create prompt message with image and text content
+    Create prompt message with image and text content based on provider
+    
+    Args:
+        image_base64: Base64 encoded image string
+        text: Prompt text
+        provider: LLM provider ("ollama" or "together")
+    Returns:
+        list: Formatted messages for the specified provider
     """
-    image_part = {
-        "type": "image_url",
-        "image_url": f"data:image/jpeg;base64,{image_base64}"
-    }
-    text_part = {"type": "text", "text": text}
-    content_parts = [image_part, text_part]
-    return HumanMessage(content=content_parts)
+    # Handle base64 prefix if present
+    if ';base64,' in image_base64:
+        image_base64 = image_base64.split(';base64,')[1]
+    
+    ai_prompt = AIMessage(content="You are a bot that is good at analyzing images.")
+    
+    if provider == "ollama":
+        # Ollama format
+        image_part = {
+            "type": "image_url",
+            "image_url": f"data:image/jpeg;base64,{image_base64}"
+        }
+        text_part = {"type": "text", "text": text}
+        content_parts = [image_part, text_part]
+        return [ai_prompt, HumanMessage(content=content_parts)]
+    
+    elif provider == "together":
+        # Together AI format
+        return [
+            ai_prompt,
+            HumanMessage(content=[
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{image_base64}"
+                    }
+                },
+                {
+                    "type": "text",
+                    "text": text
+                }
+            ])
+        ]
+    else:
+        raise ValueError(f"Unsupported provider: {provider}")
 
 def summarize_image(encoded_image):
     """
@@ -131,16 +230,20 @@ def summarize_image(encoded_image):
         if not encoded_image:
             raise LLMProcessingError("No encoded image provided")
 
-        # Remove base64 prefix if it exists
-        if ';base64,' in encoded_image:
-            encoded_image = encoded_image.split(';base64,')[1]
+        # Save image before processing
+        manage_image_storage(encoded_image)
+
+        # Get provider from settings
+        provider = settings.llm.provider.lower()
 
         # Create prompt message
-        prompt = settings.llm.prompt
-        message = create_prompt_message(encoded_image, prompt)
+        prompt = settings.llm.prompt if hasattr(settings.llm, 'prompt') else "Describe the contents of this image."
+        message = create_prompt_message(encoded_image, prompt, provider)
         
-        logger.debug("Sending request to LLM")
-        response = llm.invoke([message])
+        logger.debug(f"Sending request to LLM using provider: {provider}")
+        logger.debug("message: " + str(message))
+        
+        response = llm.invoke(message)
         logger.info("Successfully received LLM response")
         
         # Handle response
