@@ -30,6 +30,15 @@
             border: 2px dashed #ddd;
             border-radius: 8px;
             margin-bottom: 20px;
+            position: relative;
+        }
+        .upload-section.dragover {
+            border-color: #3498db;
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        .upload-instructions {
+            margin: 10px 0;
+            color: #666;
         }
         .config-section {
             margin: 20px 0;
@@ -94,6 +103,7 @@
             cursor: pointer;
             font-size: 16px;
             transition: background-color 0.3s;
+            margin: 5px;
         }
         button:hover {
             background-color: #2980b9;
@@ -121,9 +131,13 @@
         </div>
 
         <form id="uploadForm">
-            <div class="upload-section">
+            <div class="upload-section" id="drop-zone">
                 <input type="file" id="image" name="file" accept="image/*" required style="display: none;">
                 <button type="button" onclick="document.getElementById('image').click()">Choose Image</button>
+                <div class="upload-instructions">
+                    or paste an image from clipboard (Ctrl+V)<br>
+                    or drag and drop an image here
+                </div>
                 <div id="file-name"></div>
             </div>
 
@@ -181,21 +195,65 @@
     </div>
 
     <script>
+        // Handle clipboard paste
+        document.addEventListener('paste', function(e) {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    handleImageInput(blob);
+                    break;
+                }
+            }
+        });
+
+        // Handle drag and drop
+        const dropZone = document.getElementById('drop-zone');
+
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                handleImageInput(files[0]);
+            }
+        });
+
         // File input handling
         document.getElementById('image').onchange = function() {
-            const fileName = this.files[0]?.name;
-            if (fileName) {
-                document.getElementById('file-name').textContent = fileName;
-                
-                // Show image preview
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('preview-image').src = e.target.result;
-                    document.getElementById('preview-container').style.display = 'block';
-                };
-                reader.readAsDataURL(this.files[0]);
+            if (this.files[0]) {
+                handleImageInput(this.files[0]);
             }
         };
+
+        // Common function to handle image input
+        function handleImageInput(file) {
+            document.getElementById('file-name').textContent = file.name || 'Pasted image';
+            
+            // Update the file input
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            document.getElementById('image').files = dataTransfer.files;
+            
+            // Show image preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('preview-image').src = e.target.result;
+                document.getElementById('preview-container').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
 
         // Toggle configuration section
         function toggleConfig() {

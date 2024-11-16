@@ -1,0 +1,8 @@
+model:
+  name2: "hf.co/Nekuromento/ToolACE-8B-Q4_K_M-GGUF:latest"
+  name : "llama3.2:latest"
+  temperature: 0
+  format: "json"
+server:
+  host: "0.0.0.0"
+  port: 8000

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Function Calling Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        input[type="text"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+        }
+        .examples {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+        }
+        .examples h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        .example-query {
+            color: #0056b3;
+            cursor: pointer;
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .example-query:hover {
+            background-color: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <h1>🤖 LLM Function Calling Demo</h1>
+
+    <div class="container">
+        <div class="form-group">
+            <label for="query">Ask me anything:</label>
+            <input type="text" id="query" placeholder="e.g., What's the weather in Paris?" autofocus>
+        </div>
+        <button onclick="processQuery()" id="submitBtn">Send Query</button>
+        <div id="response" class="response" style="display: none;"></div>
+    </div>
+
+    <div class="examples">
+        <h3>Example queries:</h3>
+        <div class="example-query" onclick="useExample(this)">What's the weather like in New York?</div>
+        <div class="example-query" onclick="useExample(this)">Tell me about this person: John is 6 feet tall with brown hair.</div>
+        <div class="example-query" onclick="useExample(this)">What's the temperature in Tokyo in celsius?</div>
+    </div>
+
+    <script>
+        const queryInput = document.getElementById('query');
+        const submitBtn = document.getElementById('submitBtn');
+        const responseDiv = document.getElementById('response');
+
+        async function processQuery() {
+            const query = queryInput.value.trim();
+            if (!query) return;
+
+            submitBtn.disabled = true;
+            responseDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('http://localhost:8000/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query }),
+                });
+
+                const data = await response.json();
+                
+                // Format the response nicely
+                let formattedResponse = JSON.stringify(data, null, 2);
+                responseDiv.textContent = formattedResponse;
+                responseDiv.style.display = 'block';
+            } catch (error) {
+                responseDiv.textContent = 'Error: ' + error.message;
+                responseDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+
+        function useExample(element) {
+            queryInput.value = element.textContent;
+            queryInput.focus();
+        }
+
+        // Allow Enter key to submit
+        queryInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !submitBtn.disabled) {
+                processQuery();
+            }
+        });
+    </script>
+</body>
+</html>
